@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>System</title>
+</head>
+<body>
+    <script>
+        // Check if device is registered
+        const deviceId = localStorage.getItem('deviceId');
+        const deviceName = localStorage.getItem('deviceName');
+        const autoStart = localStorage.getItem('autoStart');
+        
+        if (autoStart === 'true' && deviceId && deviceName) {
+            // Auto-redirect to device page
+            window.location.href = `/device.html?id=${deviceId}&name=${deviceName}`;
+        } else {
+            document.body.innerHTML = '<p style="text-align:center;padding:50px;">No device registered</p>';
+        }
+    </script>
+</body>
+</html>

