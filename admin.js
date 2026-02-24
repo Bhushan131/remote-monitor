@@ -5,18 +5,23 @@ let selectedDevice = null;
 function connect() {
     ws = new WebSocket(`ws://${window.location.host}?type=admin`);
     
-    ws.onopen = () => console.log('Connected');
+    ws.onopen = () => {
+        console.log('Connected');
+        loadOfflineDevices();
+    };
     
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         
         if (data.type === 'devices') {
             devices = data.devices;
+            saveOfflineDevices();
             renderDevices();
         } else if (data.type === 'device_update') {
             const idx = devices.findIndex(d => d.id === data.device.id);
             if (idx >= 0) devices[idx] = data.device;
             else devices.push(data.device);
+            saveOfflineDevices();
             renderDevices();
         } else if (data.type === 'location') {
             updateLocation(data.deviceId, data.lat, data.lng);
@@ -30,6 +35,18 @@ function connect() {
     };
     
     ws.onclose = () => setTimeout(connect, 3000);
+}
+
+function saveOfflineDevices() {
+    localStorage.setItem('devices', JSON.stringify(devices));
+}
+
+function loadOfflineDevices() {
+    const stored = localStorage.getItem('devices');
+    if (stored) {
+        devices = JSON.parse(stored);
+        renderDevices();
+    }
 }
 
 function renderDevices() {

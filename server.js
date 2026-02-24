@@ -1,10 +1,23 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
+const Database = require('better-sqlite3');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const db = new Database('parental.db');
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS devices (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        status TEXT,
+        lat REAL,
+        lng REAL,
+        lastSeen INTEGER
+    )
+`);
 
 app.use(express.static(__dirname));
 app.use(express.json());
@@ -12,6 +25,20 @@ app.use(express.json());
 const devices = new Map();
 const adminClients = new Set();
 const deviceClients = new Map();
+
+function loadDevices() {
+    const rows = db.prepare('SELECT * FROM devices').all();
+    rows.forEach(row => devices.set(row.id, row));
+}
+
+function saveDevice(device) {
+    db.prepare(`
+        INSERT OR REPLACE INTO devices (id, name, status, lat, lng, lastSeen)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `).run(device.id, device.name, device.status, device.lat || 0, device.lng || 0, Date.now());
+}
+
+loadDevices();
 
 wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
@@ -23,9 +50,10 @@ wss.on('connection', (ws, req) => {
         ws.send(JSON.stringify({ type: 'devices', devices: Array.from(devices.values()) }));
     } else if (type === 'device' && deviceId) {
         deviceClients.set(deviceId, ws);
-        const device = devices.get(deviceId) || { id: deviceId, name: url.searchParams.get('name'), status: 'online' };
+        const device = devices.get(deviceId) || { id: deviceId, name: url.searchParams.get('name'), status: 'online', lat: 0, lng: 0 };
         device.status = 'online';
         devices.set(deviceId, device);
+        saveDevice(device);
         broadcastToAdmins({ type: 'device_update', device });
     }
     
@@ -38,6 +66,7 @@ wss.on('connection', (ws, req) => {
                 device.lat = data.lat;
                 device.lng = data.lng;
                 devices.set(data.deviceId, device);
+                saveDevice(device);
                 broadcastToAdmins({ type: 'location', deviceId: data.deviceId, lat: data.lat, lng: data.lng });
             }
         } else if (data.type === 'screen') {
@@ -66,6 +95,7 @@ wss.on('connection', (ws, req) => {
             if (device) {
                 device.status = 'offline';
                 devices.set(deviceId, device);
+                saveDevice(device);
                 broadcastToAdmins({ type: 'device_update', device });
             }
         }
@@ -82,8 +112,14 @@ function broadcastToAdmins(data) {
 
 app.post('/api/device/register', (req, res) => {
     const { id, name } = req.body;
-    devices.set(id, { id, name, status: 'pending', lat: 0, lng: 0 });
+    const device = { id, name, status: 'pending', lat: 0, lng: 0 };
+    devices.set(id, device);
+    saveDevice(device);
     res.json({ success: true });
+});
+
+app.get('/api/devices', (req, res) => {
+    res.json({ devices: Array.from(devices.values()) });
 });
 
 const PORT = process.env.PORT || 3000;
