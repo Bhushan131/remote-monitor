@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
+import androidx.activity.result.ActivityResult;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -25,7 +26,7 @@ public class ScreenCapturePlugin extends Plugin {
     }
 
     @ActivityCallback
-    private void handleCaptureResult(PluginCall call, android.content.pm.ActivityResult result) {
+    private void handleCaptureResult(PluginCall call, ActivityResult result) {
         if (result.getResultCode() == Activity.RESULT_OK) {
             Intent serviceIntent = new Intent(getContext(), ScreenCaptureService.class);
             serviceIntent.putExtra("projection", true);
