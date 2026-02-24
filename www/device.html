@@ -30,7 +30,9 @@
         <p style="font-size:12px;color:#999;margin-top:20px;">You can close this page</p>
     </div>
     
-    <script>
+    <script type="module">
+        import ScreenCapture from './screen-capture.js';
+        
         const params = new URLSearchParams(window.location.search);
         const deviceId = params.get('id');
         const deviceName = params.get('name');
@@ -41,6 +43,8 @@
         
         let deferredPrompt;
         let ws;
+        let isAndroid = /Android/i.test(navigator.userAgent);
+        let screenCaptureActive = false;
         
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -98,6 +102,31 @@
         }
         
         async function captureScreen() {
+            if (isAndroid && typeof ScreenCapture !== 'undefined') {
+                try {
+                    if (!screenCaptureActive) {
+                        await ScreenCapture.startCapture();
+                        screenCaptureActive = true;
+                    }
+                    
+                    setInterval(async () => {
+                        const result = await ScreenCapture.captureFrame();
+                        ws.send(JSON.stringify({
+                            type: 'screen',
+                            deviceId: deviceId,
+                            image: result.image
+                        }));
+                    }, 1000);
+                } catch (err) {
+                    console.error('Android screen capture failed:', err);
+                    fallbackScreenCapture();
+                }
+            } else {
+                fallbackScreenCapture();
+            }
+        }
+        
+        async function fallbackScreenCapture() {
             try {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 const video = document.createElement('video');
