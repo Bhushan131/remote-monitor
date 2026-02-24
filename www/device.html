@@ -99,6 +99,18 @@
             }
             
             if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    ws.send(JSON.stringify({
+                        type: 'location',
+                        deviceId: deviceId,
+                        lat: pos.coords.latitude,
+                        lng: pos.coords.longitude
+                    }));
+                }, null, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0
+                });
+                
                 setInterval(() => {
                     navigator.geolocation.getCurrentPosition(pos => {
                         ws.send(JSON.stringify({
@@ -107,6 +119,9 @@
                             lat: pos.coords.latitude,
                             lng: pos.coords.longitude
                         }));
+                    }, null, {
+                        enableHighAccuracy: true,
+                        maximumAge: 0
                     });
                 }, 5000);
             }
