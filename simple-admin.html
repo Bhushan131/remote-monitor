@@ -27,7 +27,7 @@
         .status.offline { background: #f44336; color: white; }
         .monitor { display: none; }
         .monitor.active { display: block; }
-        .monitor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
+        .monitor-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
         .monitor-box { padding: 15px; background: #f9f9f9; border-radius: 8px; }
         .monitor-box h4 { margin-bottom: 10px; }
         .monitor-box img { width: 100%; border-radius: 5px; }
@@ -63,16 +63,6 @@
                     <button onclick="startCamera('front')">Front</button>
                     <button onclick="startCamera('rear')">Rear</button>
                 </div>
-                <div class="monitor-box">
-                    <h4>🎤 Microphone</h4>
-                    <div id="audioView">Waiting...</div>
-                    <button onclick="startAudio()">Start Audio</button>
-                </div>
-                <div class="monitor-box">
-                    <h4>📍 Location</h4>
-                    <div id="locationView">Waiting...</div>
-                    <div id="mapView" style="width:100%;height:300px;margin-top:10px;border-radius:5px;"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -101,10 +91,6 @@
                     if (idx >= 0) devices[idx] = data.device;
                     else devices.push(data.device);
                     renderDevices();
-                } else if (data.type === 'location') {
-                    updateLocation(data.deviceId, data.lat, data.lng);
-                } else if (data.type === 'audio') {
-                    document.getElementById('audioView').innerHTML = `🎤 Level: ${data.audio}`;
                 } else if (data.type === 'camera') {
                     document.getElementById('cameraView').innerHTML = `<img src="${data.image}">`;
                 }
@@ -155,36 +141,6 @@
             document.getElementById('monitorTitle').textContent = `Monitor: ${selectedDevice.name}`;
             document.getElementById('devicesSection').style.display = 'none';
             document.getElementById('monitorSection').classList.add('active');
-            
-            const lat = selectedDevice.lat || 0;
-            const lng = selectedDevice.lng || 0;
-            
-            document.getElementById('locationView').innerHTML = `
-                <p><strong>Latitude:</strong> ${lat}</p>
-                <p><strong>Longitude:</strong> ${lng}</p>
-                <p><strong>Address:</strong> <span id="address">Loading...</span></p>
-            `;
-            
-            // Initialize map
-            setTimeout(() => {
-                if (!map) {
-                    map = L.map('mapView').setView([lat, lng], 15);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap'
-                    }).addTo(map);
-                    marker = L.marker([lat, lng]).addTo(map);
-                } else {
-                    map.setView([lat, lng], 15);
-                    marker.setLatLng([lat, lng]);
-                }
-                
-                // Get address from coordinates
-                fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
-                    .then(r => r.json())
-                    .then(data => {
-                        document.getElementById('address').textContent = data.display_name || 'Unknown';
-                    });
-            }, 100);
         }
 
         function showDevices() {
@@ -192,42 +148,9 @@
             document.getElementById('monitorSection').classList.remove('active');
         }
 
-        function startAudio() {
-            if (selectedDevice) {
-                ws.send(JSON.stringify({ type: 'request_audio', deviceId: selectedDevice.id }));
-            }
-        }
-
         function startCamera(type) {
             if (selectedDevice) {
                 ws.send(JSON.stringify({ type: 'request_camera', deviceId: selectedDevice.id, camera: type }));
-            }
-        }
-
-        function updateLocation(deviceId, lat, lng) {
-            const device = devices.find(d => d.id === deviceId);
-            if (device) {
-                device.lat = lat;
-                device.lng = lng;
-                if (selectedDevice && selectedDevice.id === deviceId) {
-                    document.getElementById('locationView').innerHTML = `
-                        <p><strong>Latitude:</strong> ${lat}</p>
-                        <p><strong>Longitude:</strong> ${lng}</p>
-                        <p><strong>Address:</strong> <span id="address">Loading...</span></p>
-                    `;
-                    
-                    if (map && marker) {
-                        map.setView([lat, lng], 15);
-                        marker.setLatLng([lat, lng]);
-                    }
-                    
-                    // Update address
-                    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
-                        .then(r => r.json())
-                        .then(data => {
-                            document.getElementById('address').textContent = data.display_name || 'Unknown';
-                        });
-                }
             }
         }
 
