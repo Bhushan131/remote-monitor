@@ -60,12 +60,14 @@
                 <div class="monitor-box">
                     <h4>📷 Front Camera</h4>
                     <div id="frontCameraView" style="min-height:300px;background:#eee;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">Waiting...</div>
-                    <button onclick="startCamera('front')" style="width:100%;font-size:16px;padding:12px;">📷 Start Front</button>
+                    <button onclick="startCamera('front')" style="width:48%;font-size:16px;padding:12px;margin-right:2%;">📷 Start</button>
+                    <button id="frontRecBtn" onclick="toggleRecording('front')" style="width:48%;font-size:16px;padding:12px;background:#f44336;">⏺ Record</button>
                 </div>
                 <div class="monitor-box">
                     <h4>📷 Rear Camera</h4>
                     <div id="rearCameraView" style="min-height:300px;background:#eee;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">Waiting...</div>
-                    <button onclick="startCamera('rear')" style="width:100%;font-size:16px;padding:12px;">📷 Start Rear</button>
+                    <button onclick="startCamera('rear')" style="width:48%;font-size:16px;padding:12px;margin-right:2%;">📷 Start</button>
+                    <button id="rearRecBtn" onclick="toggleRecording('rear')" style="width:48%;font-size:16px;padding:12px;background:#f44336;">⏺ Record</button>
                 </div>
             </div>
         </div>
@@ -77,6 +79,10 @@
         let selectedDevice = null;
         let map = null;
         let marker = null;
+        let frontRecorder = null;
+        let rearRecorder = null;
+        let frontChunks = [];
+        let rearChunks = [];
 
         function connect() {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -97,7 +103,28 @@
                     renderDevices();
                 } else if (data.type === 'camera') {
                     const viewId = data.camera === 'front' ? 'frontCameraView' : 'rearCameraView';
-                    document.getElementById(viewId).innerHTML = `<img src="${data.image}" style="width:100%;height:auto;">`;
+                    const img = document.createElement('img');
+                    img.src = data.image;
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    document.getElementById(viewId).innerHTML = '';
+                    document.getElementById(viewId).appendChild(img);
+                    
+                    // Record if active
+                    if (data.camera === 'front' && frontRecorder && frontRecorder.state === 'recording') {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        canvas.toBlob(blob => frontChunks.push(blob), 'image/jpeg', 1.0);
+                    }
+                    if (data.camera === 'rear' && rearRecorder && rearRecorder.state === 'recording') {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.naturalWidth;
+                        canvas.height = img.naturalHeight;
+                        canvas.getContext('2d').drawImage(img, 0, 0);
+                        canvas.toBlob(blob => rearChunks.push(blob), 'image/jpeg', 1.0);
+                    }
                 }
             };
             
@@ -146,6 +173,12 @@
             document.getElementById('monitorTitle').textContent = `Monitor: ${selectedDevice.name}`;
             document.getElementById('devicesSection').style.display = 'none';
             document.getElementById('monitorSection').classList.add('active');
+            
+            // Auto-start both cameras
+            setTimeout(() => {
+                startCamera('front');
+                startCamera('rear');
+            }, 500);
         }
 
         function showDevices() {
@@ -157,6 +190,51 @@
             if (selectedDevice) {
                 ws.send(JSON.stringify({ type: 'request_camera', deviceId: selectedDevice.id, camera: type }));
             }
+        }
+
+        function toggleRecording(camera) {
+            const btnId = camera + 'RecBtn';
+            const btn = document.getElementById(btnId);
+            
+            if (camera === 'front') {
+                if (!frontRecorder || frontRecorder.state === 'inactive') {
+                    frontChunks = [];
+                    frontRecorder = { state: 'recording' };
+                    btn.textContent = '⏹ Stop';
+                    btn.style.background = '#4caf50';
+                } else {
+                    frontRecorder.state = 'inactive';
+                    saveRecording(frontChunks, 'front');
+                    btn.textContent = '⏺ Record';
+                    btn.style.background = '#f44336';
+                }
+            } else {
+                if (!rearRecorder || rearRecorder.state === 'inactive') {
+                    rearChunks = [];
+                    rearRecorder = { state: 'recording' };
+                    btn.textContent = '⏹ Stop';
+                    btn.style.background = '#4caf50';
+                } else {
+                    rearRecorder.state = 'inactive';
+                    saveRecording(rearChunks, 'rear');
+                    btn.textContent = '⏺ Record';
+                    btn.style.background = '#f44336';
+                }
+            }
+        }
+
+        function saveRecording(chunks, camera) {
+            if (chunks.length === 0) return alert('No frames recorded');
+            
+            const zip = chunks;
+            const blob = new Blob(zip, { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${selectedDevice.name}_${camera}_${Date.now()}.zip`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert(`Saved ${chunks.length} frames`);
         }
 
         connect();
