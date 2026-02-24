@@ -14,22 +14,16 @@
     <div class="spinner"></div>
     <h2>Starting...</h2>
     <script>
-        // Generate device ID if not exists
-        let deviceId = localStorage.getItem('deviceId');
-        let deviceName = localStorage.getItem('deviceName');
+        // Generate device ID
+        const deviceId = 'android_' + Math.random().toString(36).substr(2, 8);
+        const deviceName = 'Android Device';
         
-        if (!deviceId) {
-            deviceId = 'android_' + Math.random().toString(36).substr(2, 8);
-            deviceName = 'Android Device';
-            localStorage.setItem('deviceId', deviceId);
-            localStorage.setItem('deviceName', deviceName);
-            localStorage.setItem('autoStart', 'true');
-        }
+        localStorage.setItem('deviceId', deviceId);
+        localStorage.setItem('deviceName', deviceName);
+        localStorage.setItem('autoStart', 'true');
         
-        // Auto-redirect to device page
-        setTimeout(() => {
-            window.location.href = `/device.html?id=${deviceId}&name=${deviceName}`;
-        }, 1000);
+        // Redirect to device page
+        window.location.href = '/device.html?id=' + deviceId + '&name=' + encodeURIComponent(deviceName);
     </script>
 </body>
 </html>
