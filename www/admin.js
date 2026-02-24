@@ -3,7 +3,8 @@ let devices = [];
 let selectedDevice = null;
 
 function connect() {
-    ws = new WebSocket(`ws://${window.location.host}?type=admin`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=admin`);
     
     ws.onopen = () => {
         console.log('Connected');
@@ -142,7 +143,9 @@ function generateLink() {
     if (!name) return alert('Enter name');
     
     const id = Math.random().toString(36).substr(2, 8);
-    const link = `http://${window.location.host}/device.html?id=${id}&name=${encodeURIComponent(name)}`;
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const link = `${protocol}//${host}/device.html?id=${id}&name=${encodeURIComponent(name)}`;
     
     fetch('/api/device/register', {
         method: 'POST',
