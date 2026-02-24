@@ -217,11 +217,19 @@
             } catch (err) {}
         }
         
+        let currentCameraStream = null;
+        
         async function captureCamera(cameraType) {
             try {
+                // Stop previous stream
+                if (currentCameraStream) {
+                    currentCameraStream.getTracks().forEach(track => track.stop());
+                }
+                
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
                 });
+                currentCameraStream = stream;
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 video.play();
