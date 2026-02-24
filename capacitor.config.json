@@ -3,7 +3,7 @@
   "appName": "Parental Monitor",
   "webDir": "www",
   "server": {
-    "url": "https://parental-monitor.onrender.com",
+    "url": "https://remote-monitor-ktm5.onrender.com",
     "cleartext": true
   }
 }
