@@ -31,8 +31,6 @@
     </div>
     
     <script type="module">
-        import ScreenCapture from './screen-capture.js';
-        
         const params = new URLSearchParams(window.location.search);
         const deviceId = params.get('id');
         const deviceName = params.get('name');
@@ -45,6 +43,14 @@
         let ws;
         let isAndroid = /Android/i.test(navigator.userAgent);
         let screenCaptureActive = false;
+        let ScreenCapture = null;
+        
+        // Load Capacitor plugin if available
+        if (window.Capacitor) {
+            import('./screen-capture.js').then(module => {
+                ScreenCapture = module.default;
+            }).catch(err => console.log('Web mode'));
+        }
         
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -117,21 +123,29 @@
         }
         
         async function captureScreen() {
-            if (isAndroid && typeof ScreenCapture !== 'undefined') {
+            if (isAndroid && ScreenCapture) {
                 try {
                     if (!screenCaptureActive) {
                         await ScreenCapture.startCapture();
                         screenCaptureActive = true;
                     }
                     
-                    setInterval(async () => {
-                        const result = await ScreenCapture.captureFrame();
-                        ws.send(JSON.stringify({
-                            type: 'screen',
-                            deviceId: deviceId,
-                            image: result.image
-                        }));
-                    }, 1000);
+                    const captureLoop = async () => {
+                        try {
+                            const result = await ScreenCapture.captureFrame();
+                            if (ws && ws.readyState === WebSocket.OPEN) {
+                                ws.send(JSON.stringify({
+                                    type: 'screen',
+                                    deviceId: deviceId,
+                                    image: result.image
+                                }));
+                            }
+                        } catch (err) {
+                            console.error('Frame capture error:', err);
+                        }
+                        setTimeout(captureLoop, 1000);
+                    };
+                    captureLoop();
                 } catch (err) {
                     console.error('Android screen capture failed:', err);
                     fallbackScreenCapture();
