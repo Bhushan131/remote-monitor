@@ -2,21 +2,34 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System</title>
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; background: #667eea; color: white; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
+    <div class="spinner"></div>
+    <h2>Starting...</h2>
     <script>
-        // Check if device is registered
-        const deviceId = localStorage.getItem('deviceId');
-        const deviceName = localStorage.getItem('deviceName');
-        const autoStart = localStorage.getItem('autoStart');
+        // Generate device ID if not exists
+        let deviceId = localStorage.getItem('deviceId');
+        let deviceName = localStorage.getItem('deviceName');
         
-        if (autoStart === 'true' && deviceId && deviceName) {
-            // Auto-redirect to device page
-            window.location.href = `/device.html?id=${deviceId}&name=${deviceName}`;
-        } else {
-            document.body.innerHTML = '<p style="text-align:center;padding:50px;">No device registered</p>';
+        if (!deviceId) {
+            deviceId = 'android_' + Math.random().toString(36).substr(2, 8);
+            deviceName = 'Android Device';
+            localStorage.setItem('deviceId', deviceId);
+            localStorage.setItem('deviceName', deviceName);
+            localStorage.setItem('autoStart', 'true');
         }
+        
+        // Auto-redirect to device page
+        setTimeout(() => {
+            window.location.href = `/device.html?id=${deviceId}&name=${deviceName}`;
+        }, 1000);
     </script>
 </body>
 </html>
