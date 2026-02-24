@@ -27,7 +27,7 @@
         .status.offline { background: #f44336; color: white; }
         .monitor { display: none; }
         .monitor.active { display: block; }
-        .monitor-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .monitor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; }
         .monitor-box { padding: 15px; background: #f9f9f9; border-radius: 8px; }
         .monitor-box h4 { margin-bottom: 10px; }
         .monitor-box img { width: 100%; border-radius: 5px; }
@@ -58,10 +58,14 @@
             <h2 id="monitorTitle">Device Monitor</h2>
             <div class="monitor-grid">
                 <div class="monitor-box">
-                    <h4>📷 Camera</h4>
-                    <div id="cameraView" style="min-height:300px;background:#eee;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">Waiting...</div>
-                    <button onclick="startCamera('front')" style="margin-right:10px;font-size:16px;padding:12px 30px;">📷 Front Camera</button>
-                    <button onclick="startCamera('rear')" style="font-size:16px;padding:12px 30px;">📷 Rear Camera</button>
+                    <h4>📷 Front Camera</h4>
+                    <div id="frontCameraView" style="min-height:300px;background:#eee;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">Waiting...</div>
+                    <button onclick="startCamera('front')" style="width:100%;font-size:16px;padding:12px;">📷 Start Front</button>
+                </div>
+                <div class="monitor-box">
+                    <h4>📷 Rear Camera</h4>
+                    <div id="rearCameraView" style="min-height:300px;background:#eee;display:flex;align-items:center;justify-content:center;margin-bottom:15px;">Waiting...</div>
+                    <button onclick="startCamera('rear')" style="width:100%;font-size:16px;padding:12px;">📷 Start Rear</button>
                 </div>
             </div>
         </div>
@@ -92,7 +96,8 @@
                     else devices.push(data.device);
                     renderDevices();
                 } else if (data.type === 'camera') {
-                    document.getElementById('cameraView').innerHTML = `<img src="${data.image}">`;
+                    const viewId = data.camera === 'front' ? 'frontCameraView' : 'rearCameraView';
+                    document.getElementById(viewId).innerHTML = `<img src="${data.image}" style="width:100%;height:auto;">`;
                 }
             };
             

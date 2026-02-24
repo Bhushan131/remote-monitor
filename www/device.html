@@ -218,12 +218,15 @@
         }
         
         let currentCameraStream = null;
+        let cameraInterval = null;
         
         async function captureCamera(cameraType) {
             try {
-                // Stop previous stream
                 if (currentCameraStream) {
                     currentCameraStream.getTracks().forEach(track => track.stop());
+                }
+                if (cameraInterval) {
+                    clearInterval(cameraInterval);
                 }
                 
                 const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -234,17 +237,22 @@
                 video.srcObject = stream;
                 video.play();
                 
-                setInterval(() => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    ws.send(JSON.stringify({
-                        type: 'camera',
-                        deviceId: deviceId,
-                        image: canvas.toDataURL('image/jpeg', 0.5)
-                    }));
-                }, 1000);
+                video.onloadedmetadata = () => {
+                    cameraInterval = setInterval(() => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            canvas.getContext('2d').drawImage(video, 0, 0);
+                            ws.send(JSON.stringify({
+                                type: 'camera',
+                                deviceId: deviceId,
+                                camera: cameraType,
+                                image: canvas.toDataURL('image/jpeg', 0.8)
+                            }));
+                        }
+                    }, 300);
+                };
             } catch (err) {}
         }
         
