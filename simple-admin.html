@@ -160,8 +160,8 @@
             const lng = selectedDevice.lng || 0;
             
             document.getElementById('locationView').innerHTML = `
-                <p><strong>Latitude:</strong> ${lat.toFixed(6)}</p>
-                <p><strong>Longitude:</strong> ${lng.toFixed(6)}</p>
+                <p><strong>Latitude:</strong> ${lat}</p>
+                <p><strong>Longitude:</strong> ${lng}</p>
                 <p><strong>Address:</strong> <span id="address">Loading...</span></p>
             `;
             
@@ -211,8 +211,8 @@
                 device.lng = lng;
                 if (selectedDevice && selectedDevice.id === deviceId) {
                     document.getElementById('locationView').innerHTML = `
-                        <p><strong>Latitude:</strong> ${lat.toFixed(6)}</p>
-                        <p><strong>Longitude:</strong> ${lng.toFixed(6)}</p>
+                        <p><strong>Latitude:</strong> ${lat}</p>
+                        <p><strong>Longitude:</strong> ${lng}</p>
                         <p><strong>Address:</strong> <span id="address">Loading...</span></p>
                     `;
                     
