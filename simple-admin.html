@@ -56,11 +56,6 @@
             <h2 id="monitorTitle">Device Monitor</h2>
             <div class="monitor-grid">
                 <div class="monitor-box">
-                    <h4>📺 Screen Mirror</h4>
-                    <div id="screenView">Waiting...</div>
-                    <button onclick="startScreen()">Start Screen</button>
-                </div>
-                <div class="monitor-box">
                     <h4>📷 Camera</h4>
                     <div id="cameraView">Waiting...</div>
                     <button onclick="startCamera('front')">Front</button>
@@ -103,8 +98,6 @@
                     renderDevices();
                 } else if (data.type === 'location') {
                     updateLocation(data.deviceId, data.lat, data.lng);
-                } else if (data.type === 'screen') {
-                    document.getElementById('screenView').innerHTML = `<img src="${data.image}">`;
                 } else if (data.type === 'audio') {
                     document.getElementById('audioView').innerHTML = `🎤 Level: ${data.audio}`;
                 } else if (data.type === 'camera') {
@@ -163,12 +156,6 @@
         function showDevices() {
             document.getElementById('devicesSection').style.display = 'block';
             document.getElementById('monitorSection').classList.remove('active');
-        }
-
-        function startScreen() {
-            if (selectedDevice) {
-                ws.send(JSON.stringify({ type: 'request_screen', deviceId: selectedDevice.id }));
-            }
         }
 
         function startAudio() {
