@@ -147,6 +147,11 @@ button:hover {
     padding: 20px;
 }
 
+.monitor-box button {
+    margin-top: 10px;
+    width: 100%;
+}
+
 .view {
     min-height: 200px;
     background: #f9f9f9;

