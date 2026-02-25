@@ -135,15 +135,15 @@ function toggleRecording(camera) {
             frontChunks = [];
             const canvas = document.createElement('canvas');
             const stream = canvas.captureStream(30);
-            frontRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            frontRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
             
             frontRecorder.ondataavailable = e => frontChunks.push(e.data);
             frontRecorder.onstop = () => {
-                const blob = new Blob(frontChunks, { type: 'video/webm' });
+                const blob = new Blob(frontChunks, { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `front_camera_${Date.now()}.webm`;
+                a.download = `front_camera_${Date.now()}.mp4`;
                 a.click();
                 frontRecorder = null;
             };
@@ -172,15 +172,15 @@ function toggleRecording(camera) {
             rearChunks = [];
             const canvas = document.createElement('canvas');
             const stream = canvas.captureStream(30);
-            rearRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            rearRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
             
             rearRecorder.ondataavailable = e => rearChunks.push(e.data);
             rearRecorder.onstop = () => {
-                const blob = new Blob(rearChunks, { type: 'video/webm' });
+                const blob = new Blob(rearChunks, { type: 'video/mp4' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `rear_camera_${Date.now()}.webm`;
+                a.download = `rear_camera_${Date.now()}.mp4`;
                 a.click();
                 rearRecorder = null;
             };
