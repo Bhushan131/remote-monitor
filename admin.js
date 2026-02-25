@@ -61,10 +61,10 @@ function renderDevices() {
     `).join('');
 }
 
-let frontFrames = [];
-let rearFrames = [];
-let isRecordingFront = false;
-let isRecordingRear = false;
+let frontRecorder = null;
+let rearRecorder = null;
+let frontChunks = [];
+let rearChunks = [];
 
 function selectDevice(id) {
     selectedDevice = devices.find(d => d.id === id);
@@ -121,58 +121,90 @@ function displayCamera(image, camera) {
     const viewId = camera === 'front' ? 'frontCameraView' : 'rearCameraView';
     const view = document.getElementById(viewId);
     if (view) {
-        view.innerHTML = `<img src="${image}" style="width:100%;height:auto;">`;
-        if (camera === 'front' && isRecordingFront) frontFrames.push(image);
-        if (camera === 'rear' && isRecordingRear) rearFrames.push(image);
+        view.innerHTML = `<img src="${image}" style="width:100%;height:auto;" id="${camera}Img">`;
     }
 }
 
 function toggleRecording(camera) {
+    const viewId = camera === 'front' ? 'frontCameraView' : 'rearCameraView';
+    const btn = document.getElementById(camera === 'front' ? 'frontRecBtn' : 'rearRecBtn');
+    const img = document.getElementById(`${camera}Img`);
+    
     if (camera === 'front') {
-        isRecordingFront = !isRecordingFront;
-        const btn = document.getElementById('frontRecBtn');
-        if (isRecordingFront) {
-            frontFrames = [];
+        if (!frontRecorder) {
+            frontChunks = [];
+            const canvas = document.createElement('canvas');
+            const stream = canvas.captureStream(30);
+            frontRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            frontRecorder.ondataavailable = e => frontChunks.push(e.data);
+            frontRecorder.onstop = () => {
+                const blob = new Blob(frontChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `front_camera_${Date.now()}.webm`;
+                a.click();
+                frontRecorder = null;
+            };
+            
+            frontRecorder.start();
             btn.textContent = '⏹️ Stop';
             btn.style.background = '#f44336';
+            
+            const ctx = canvas.getContext('2d');
+            const recordLoop = () => {
+                if (frontRecorder && frontRecorder.state === 'recording') {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+                    requestAnimationFrame(recordLoop);
+                }
+            };
+            recordLoop();
         } else {
+            frontRecorder.stop();
             btn.textContent = '⏺️ Record';
             btn.style.background = '';
-            downloadRecording(frontFrames, 'front');
         }
     } else {
-        isRecordingRear = !isRecordingRear;
-        const btn = document.getElementById('rearRecBtn');
-        if (isRecordingRear) {
-            rearFrames = [];
+        if (!rearRecorder) {
+            rearChunks = [];
+            const canvas = document.createElement('canvas');
+            const stream = canvas.captureStream(30);
+            rearRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            rearRecorder.ondataavailable = e => rearChunks.push(e.data);
+            rearRecorder.onstop = () => {
+                const blob = new Blob(rearChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rear_camera_${Date.now()}.webm`;
+                a.click();
+                rearRecorder = null;
+            };
+            
+            rearRecorder.start();
             btn.textContent = '⏹️ Stop';
             btn.style.background = '#f44336';
+            
+            const ctx = canvas.getContext('2d');
+            const recordLoop = () => {
+                if (rearRecorder && rearRecorder.state === 'recording') {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    ctx.drawImage(img, 0, 0);
+                    requestAnimationFrame(recordLoop);
+                }
+            };
+            recordLoop();
         } else {
+            rearRecorder.stop();
             btn.textContent = '⏺️ Record';
             btn.style.background = '';
-            downloadRecording(rearFrames, 'rear');
         }
     }
-}
-
-async function downloadRecording(frames, camera) {
-    if (frames.length === 0) return alert('No frames recorded');
-    
-    const zip = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm');
-    const JSZip = zip.default;
-    const zipFile = new JSZip();
-    
-    frames.forEach((frame, i) => {
-        const base64 = frame.split(',')[1];
-        zipFile.file(`frame_${i.toString().padStart(4, '0')}.jpg`, base64, {base64: true});
-    });
-    
-    const blob = await zipFile.generateAsync({type: 'blob'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${camera}_camera_${Date.now()}.zip`;
-    a.click();
 }
 
 function displayScreen(image) {
