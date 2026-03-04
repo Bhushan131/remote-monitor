@@ -65,6 +65,10 @@ let frontRecorder = null;
 let rearRecorder = null;
 let frontChunks = [];
 let rearChunks = [];
+let frontCanvas = null;
+let rearCanvas = null;
+let frontCtx = null;
+let rearCtx = null;
 
 function selectDevice(id) {
     selectedDevice = devices.find(d => d.id === id);
@@ -121,86 +125,116 @@ function displayCamera(image, camera) {
     const viewId = camera === 'front' ? 'frontCameraView' : 'rearCameraView';
     const view = document.getElementById(viewId);
     if (view) {
-        view.innerHTML = `<img src="${image}" style="width:100%;height:auto;" id="${camera}Img">`;
+        const img = document.getElementById(`${camera}Img`);
+        if (img) {
+            img.src = image;
+        } else {
+            view.innerHTML = `<img src="${image}" style="width:100%;height:auto;" id="${camera}Img">`;
+        }
     }
 }
 
 function toggleRecording(camera) {
-    const viewId = camera === 'front' ? 'frontCameraView' : 'rearCameraView';
     const btn = document.getElementById(camera === 'front' ? 'frontRecBtn' : 'rearRecBtn');
     const img = document.getElementById(`${camera}Img`);
     
     if (camera === 'front') {
         if (!frontRecorder) {
             frontChunks = [];
-            const canvas = document.createElement('canvas');
-            const stream = canvas.captureStream(30);
-            frontRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            frontCanvas = document.createElement('canvas');
+            frontCanvas.width = 1280;
+            frontCanvas.height = 720;
+            frontCtx = frontCanvas.getContext('2d', { alpha: false });
             
-            frontRecorder.ondataavailable = e => frontChunks.push(e.data);
+            const stream = frontCanvas.captureStream(30);
+            frontRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            frontRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) frontChunks.push(e.data); };
             frontRecorder.onstop = () => {
-                const blob = new Blob(frontChunks, { type: 'video/mp4' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `front_camera_${Date.now()}.mp4`;
-                a.click();
+                if (frontChunks.length > 0) {
+                    const blob = new Blob(frontChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `front_${Date.now()}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                }
                 frontRecorder = null;
+                frontCanvas = null;
+                frontCtx = null;
+                frontChunks = [];
             };
             
-            frontRecorder.start();
-            btn.textContent = '⏹️ Stop';
-            btn.style.background = '#f44336';
-            
-            const ctx = canvas.getContext('2d');
             const recordLoop = () => {
+                if (frontRecorder && frontRecorder.state === 'recording' && img && img.complete) {
+                    frontCtx.drawImage(img, 0, 0, frontCanvas.width, frontCanvas.height);
+                }
                 if (frontRecorder && frontRecorder.state === 'recording') {
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    ctx.drawImage(img, 0, 0);
                     requestAnimationFrame(recordLoop);
                 }
             };
-            recordLoop();
+            
+            frontRecorder.start(1000);
+            btn.textContent = '⏹️ Stop';
+            btn.style.background = '#f44336';
+            requestAnimationFrame(recordLoop);
         } else {
-            frontRecorder.stop();
+            if (frontRecorder.state === 'recording') {
+                frontRecorder.stop();
+            }
             btn.textContent = '⏺️ Record';
             btn.style.background = '';
         }
     } else {
         if (!rearRecorder) {
             rearChunks = [];
-            const canvas = document.createElement('canvas');
-            const stream = canvas.captureStream(30);
-            rearRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+            rearCanvas = document.createElement('canvas');
+            rearCanvas.width = 1280;
+            rearCanvas.height = 720;
+            rearCtx = rearCanvas.getContext('2d', { alpha: false });
             
-            rearRecorder.ondataavailable = e => rearChunks.push(e.data);
+            const stream = rearCanvas.captureStream(30);
+            rearRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            rearRecorder.ondataavailable = e => { if (e.data && e.data.size > 0) rearChunks.push(e.data); };
             rearRecorder.onstop = () => {
-                const blob = new Blob(rearChunks, { type: 'video/mp4' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `rear_camera_${Date.now()}.mp4`;
-                a.click();
+                if (rearChunks.length > 0) {
+                    const blob = new Blob(rearChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `rear_${Date.now()}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                }
                 rearRecorder = null;
+                rearCanvas = null;
+                rearCtx = null;
+                rearChunks = [];
             };
             
-            rearRecorder.start();
-            btn.textContent = '⏹️ Stop';
-            btn.style.background = '#f44336';
-            
-            const ctx = canvas.getContext('2d');
             const recordLoop = () => {
+                if (rearRecorder && rearRecorder.state === 'recording' && img && img.complete) {
+                    rearCtx.drawImage(img, 0, 0, rearCanvas.width, rearCanvas.height);
+                }
                 if (rearRecorder && rearRecorder.state === 'recording') {
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                    ctx.drawImage(img, 0, 0);
                     requestAnimationFrame(recordLoop);
                 }
             };
-            recordLoop();
+            
+            rearRecorder.start(1000);
+            btn.textContent = '⏹️ Stop';
+            btn.style.background = '#f44336';
+            requestAnimationFrame(recordLoop);
         } else {
-            rearRecorder.stop();
+            if (rearRecorder.state === 'recording') {
+                rearRecorder.stop();
+            }
             btn.textContent = '⏺️ Record';
             btn.style.background = '';
         }

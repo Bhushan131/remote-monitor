@@ -206,26 +206,36 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         facingMode: cameraType === 'front' ? 'user' : 'environment',
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
                     } 
                 });
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 video.play();
                 
-                setInterval(() => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    ws.send(JSON.stringify({
-                        type: 'camera',
-                        deviceId: deviceId,
-                        camera: cameraType,
-                        image: canvas.toDataURL('image/jpeg', 0.8)
-                    }));
-                }, 1000);
+                const canvas = document.createElement('canvas');
+                canvas.width = 1280;
+                canvas.height = 720;
+                const ctx = canvas.getContext('2d', { alpha: false });
+                
+                const sendFrame = () => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const image = canvas.toDataURL('image/jpeg', 0.85);
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: 'camera',
+                                deviceId: deviceId,
+                                camera: cameraType,
+                                image: image
+                            }));
+                        }
+                    }
+                    setTimeout(sendFrame, 100);
+                };
+                video.onloadedmetadata = () => sendFrame();
             } catch (err) {}
         }
         
