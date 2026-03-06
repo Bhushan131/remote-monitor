@@ -122,6 +122,47 @@ app.get('/api/devices', (req, res) => {
     res.json({ devices: Array.from(devices.values()) });
 });
 
+// API endpoint for child app to report data
+app.post('/api/report', (req, res) => {
+    const data = req.body;
+    console.log('Device Report:', data);
+    
+    // Update device info
+    if (data.deviceId) {
+        const device = devices.get(data.deviceId) || {
+            id: data.deviceId,
+            name: 'Child Device',
+            status: 'online',
+            lat: 0,
+            lng: 0
+        };
+        
+        // Update location if provided
+        if (data.location) {
+            const [lat, lng] = data.location.split(',');
+            device.lat = parseFloat(lat) || 0;
+            device.lng = parseFloat(lng) || 0;
+        }
+        
+        device.status = 'online';
+        device.lastSeen = Date.now();
+        device.battery = data.battery || 0;
+        device.appUsage = data.appUsage || '';
+        
+        devices.set(data.deviceId, device);
+        saveDevice(device);
+        
+        // Broadcast to admin
+        broadcastToAdmins({ 
+            type: 'device_update', 
+            device,
+            report: data
+        });
+    }
+    
+    res.json({ success: true, message: 'Data received' });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);
