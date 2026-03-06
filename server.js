@@ -15,7 +15,21 @@ db.exec(`
         status TEXT,
         lat REAL,
         lng REAL,
-        lastSeen INTEGER
+        lastSeen INTEGER,
+        battery INTEGER,
+        appUsage TEXT,
+        location TEXT
+    )
+`);
+
+db.exec(`
+    CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        deviceId TEXT,
+        timestamp INTEGER,
+        location TEXT,
+        battery INTEGER,
+        appUsage TEXT
     )
 `);
 
@@ -33,9 +47,19 @@ function loadDevices() {
 
 function saveDevice(device) {
     db.prepare(`
-        INSERT OR REPLACE INTO devices (id, name, status, lat, lng, lastSeen)
-        VALUES (?, ?, ?, ?, ?, ?)
-    `).run(device.id, device.name, device.status, device.lat || 0, device.lng || 0, Date.now());
+        INSERT OR REPLACE INTO devices (id, name, status, lat, lng, lastSeen, battery, appUsage, location)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+        device.id, 
+        device.name, 
+        device.status, 
+        device.lat || 0, 
+        device.lng || 0, 
+        device.lastSeen || Date.now(),
+        device.battery || 0,
+        device.appUsage || '',
+        device.location || ''
+    );
 }
 
 loadDevices();
@@ -119,7 +143,16 @@ app.post('/api/device/register', (req, res) => {
 });
 
 app.get('/api/devices', (req, res) => {
-    res.json({ devices: Array.from(devices.values()) });
+    const deviceList = Array.from(devices.values()).map(d => ({
+        deviceId: d.id,
+        name: d.name || 'Unknown Device',
+        status: d.status,
+        location: d.location || `${d.lat},${d.lng}`,
+        battery: d.battery || 0,
+        timestamp: d.lastSeen || Date.now(),
+        appUsage: d.appUsage || '[]'
+    }));
+    res.json(deviceList);
 });
 
 // API endpoint for child app to report data
@@ -148,8 +181,15 @@ app.post('/api/report', (req, res) => {
         device.lastSeen = Date.now();
         device.battery = data.battery || 0;
         device.appUsage = data.appUsage || '';
+        device.location = data.location || '';
         
         devices.set(data.deviceId, device);
+        
+        // Save report to database
+        db.prepare(`
+            INSERT INTO reports (deviceId, timestamp, location, battery, appUsage)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(data.deviceId, data.timestamp || Date.now(), data.location || '', data.battery || 0, data.appUsage || '');
         saveDevice(device);
         
         // Broadcast to admin
