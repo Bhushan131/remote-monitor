@@ -1,0 +1,53 @@
+# 🚀 BUILD & INSTALL - SIMPLE STEPS
+
+## STEP 1: Prepare Phone
+
+1. On your Android phone:
+   - Go to **Settings**
+   - Tap **About Phone**
+   - Tap **Build Number** 7 times (until it says "You are now a developer")
+   - Go back to **Settings**
+   - Tap **Developer Options**
+   - Turn ON **USB Debugging**
+
+2. Connect phone to PC with USB cable
+
+3. On phone, tap **Allow** when it asks about USB debugging
+
+## STEP 2: Build & Install (ONE COMMAND)
+
+Open Command Prompt and run:
+
+```cmd
+cd d:\Bhushan\parental
+INSTALL.bat
+```
+
+**Wait 2-3 minutes** for it to build and install.
+
+## STEP 3: Activate on Phone
+
+1. On phone, open **"Device Setup"** app
+2. Tap **"Activate Protection"**
+3. Grant permissions when asked
+4. App icon will disappear
+5. Done! ✅
+
+## STEP 4: View Dashboard
+
+On any device, open browser:
+```
+https://remote-monitor-ktm5.onrender.com
+```
+
+---
+
+## That's It!
+
+Just run this ONE command:
+```cmd
+cd d:\Bhushan\parental
+INSTALL.bat
+```
+
+Then activate on phone. Done! 🎉

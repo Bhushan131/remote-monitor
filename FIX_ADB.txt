@@ -1,0 +1,27 @@
+# ⚡ FIX: ADB Not Found
+
+## Quick Fix (Run This)
+
+```cmd
+cd d:\Bhushan\parental
+setup-adb.bat
+```
+
+This will download and install ADB automatically.
+
+Then run:
+```cmd
+INSTALL.bat
+```
+
+---
+
+## What It Does
+
+1. Downloads ADB from Google
+2. Extracts to `platform-tools` folder
+3. Ready to use!
+
+---
+
+**Just run: `setup-adb.bat` then `INSTALL.bat`** 🚀

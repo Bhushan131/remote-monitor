@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Monitor - Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        h1 { color: #333; margin-bottom: 20px; }
+        .test-btn { background: #2196F3; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .test-btn:hover { background: #1976D2; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; margin: 10px 0; }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Server Connection Test</h1>
+        
+        <button class="test-btn" onclick="testServer()">Test Server Connection</button>
+        <button class="test-btn" onclick="testDevices()">Test /api/devices</button>
+        <button class="test-btn" onclick="testReport()">Test /api/report</button>
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'https://remote-monitor.onrender.com';
+        const output = document.getElementById('output');
+
+        function log(message, isError = false) {
+            const div = document.createElement('div');
+            div.innerHTML = `<pre class="${isError ? 'error' : 'success'}">${message}</pre>`;
+            output.appendChild(div);
+        }
+
+        async function testServer() {
+            output.innerHTML = '';
+            log('Testing server connection...');
+            try {
+                const response = await fetch(SERVER_URL);
+                log(`✅ Server is reachable! Status: ${response.status}`);
+                const text = await response.text();
+                log(`Response preview: ${text.substring(0, 200)}...`);
+            } catch (error) {
+                log(`❌ Server connection failed: ${error.message}`, true);
+            }
+        }
+
+        async function testDevices() {
+            output.innerHTML = '';
+            log('Testing /api/devices endpoint...');
+            try {
+                const response = await fetch(`${SERVER_URL}/api/devices`);
+                log(`Status: ${response.status}`);
+                const data = await response.json();
+                log(`✅ Success! Received data:\n${JSON.stringify(data, null, 2)}`);
+            } catch (error) {
+                log(`❌ Failed: ${error.message}`, true);
+                try {
+                    const response = await fetch(`${SERVER_URL}/api/devices`);
+                    const text = await response.text();
+                    log(`Raw response:\n${text}`, true);
+                } catch (e) {
+                    log(`Cannot fetch raw response: ${e.message}`, true);
+                }
+            }
+        }
+
+        async function testReport() {
+            output.innerHTML = '';
+            log('Testing /api/report endpoint...');
+            try {
+                const testData = {
+                    deviceId: 'test-device-123',
+                    timestamp: Date.now(),
+                    location: '28.6139,77.2090',
+                    battery: 85,
+                    appUsage: JSON.stringify([
+                        { name: 'Chrome', time: 3600000 },
+                        { name: 'YouTube', time: 1800000 }
+                    ])
+                };
+                
+                const response = await fetch(`${SERVER_URL}/api/report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                log(`Status: ${response.status}`);
+                const result = await response.json();
+                log(`✅ Success! Response:\n${JSON.stringify(result, null, 2)}`);
+                log('Now test /api/devices to see if data was saved...');
+            } catch (error) {
+                log(`❌ Failed: ${error.message}`, true);
+            }
+        }
+
+        // Auto-test on load
+        window.onload = () => {
+            log('Page loaded. Click buttons to test endpoints.');
+        };
+    </script>
+</body>
+</html>

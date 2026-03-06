@@ -1,68 +1,19 @@
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const Database = require('better-sqlite3');
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-const db = new Database('parental.db');
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS devices (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        status TEXT,
-        lat REAL,
-        lng REAL,
-        lastSeen INTEGER,
-        battery INTEGER,
-        appUsage TEXT,
-        location TEXT
-    )
-`);
-
-db.exec(`
-    CREATE TABLE IF NOT EXISTS reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        deviceId TEXT,
-        timestamp INTEGER,
-        location TEXT,
-        battery INTEGER,
-        appUsage TEXT
-    )
-`);
 
 app.use(express.static(__dirname));
 app.use(express.json());
 
+// In-memory storage
 const devices = new Map();
+const reports = [];
 const adminClients = new Set();
 const deviceClients = new Map();
-
-function loadDevices() {
-    const rows = db.prepare('SELECT * FROM devices').all();
-    rows.forEach(row => devices.set(row.id, row));
-}
-
-function saveDevice(device) {
-    db.prepare(`
-        INSERT OR REPLACE INTO devices (id, name, status, lat, lng, lastSeen, battery, appUsage, location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-        device.id, 
-        device.name, 
-        device.status, 
-        device.lat || 0, 
-        device.lng || 0, 
-        device.lastSeen || Date.now(),
-        device.battery || 0,
-        device.appUsage || '',
-        device.location || ''
-    );
-}
-
-loadDevices();
 
 wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
@@ -74,10 +25,15 @@ wss.on('connection', (ws, req) => {
         ws.send(JSON.stringify({ type: 'devices', devices: Array.from(devices.values()) }));
     } else if (type === 'device' && deviceId) {
         deviceClients.set(deviceId, ws);
-        const device = devices.get(deviceId) || { id: deviceId, name: url.searchParams.get('name'), status: 'online', lat: 0, lng: 0 };
+        const device = devices.get(deviceId) || { 
+            id: deviceId, 
+            name: url.searchParams.get('name') || 'Unknown Device', 
+            status: 'online', 
+            lat: 0, 
+            lng: 0 
+        };
         device.status = 'online';
         devices.set(deviceId, device);
-        saveDevice(device);
         broadcastToAdmins({ type: 'device_update', device });
     }
     
@@ -90,7 +46,6 @@ wss.on('connection', (ws, req) => {
                 device.lat = data.lat;
                 device.lng = data.lng;
                 devices.set(data.deviceId, device);
-                saveDevice(device);
                 broadcastToAdmins({ type: 'location', deviceId: data.deviceId, lat: data.lat, lng: data.lng });
             }
         } else if (data.type === 'screen') {
@@ -119,7 +74,6 @@ wss.on('connection', (ws, req) => {
             if (device) {
                 device.status = 'offline';
                 devices.set(deviceId, device);
-                saveDevice(device);
                 broadcastToAdmins({ type: 'device_update', device });
             }
         }
@@ -138,7 +92,6 @@ app.post('/api/device/register', (req, res) => {
     const { id, name } = req.body;
     const device = { id, name, status: 'pending', lat: 0, lng: 0 };
     devices.set(id, device);
-    saveDevice(device);
     res.json({ success: true });
 });
 
@@ -185,12 +138,19 @@ app.post('/api/report', (req, res) => {
         
         devices.set(data.deviceId, device);
         
-        // Save report to database
-        db.prepare(`
-            INSERT INTO reports (deviceId, timestamp, location, battery, appUsage)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(data.deviceId, data.timestamp || Date.now(), data.location || '', data.battery || 0, data.appUsage || '');
-        saveDevice(device);
+        // Store report
+        reports.push({
+            deviceId: data.deviceId,
+            timestamp: data.timestamp || Date.now(),
+            location: data.location || '',
+            battery: data.battery || 0,
+            appUsage: data.appUsage || ''
+        });
+        
+        // Keep only last 1000 reports
+        if (reports.length > 1000) {
+            reports.shift();
+        }
         
         // Broadcast to admin
         broadcastToAdmins({ 
@@ -205,5 +165,5 @@ app.post('/api/report', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
