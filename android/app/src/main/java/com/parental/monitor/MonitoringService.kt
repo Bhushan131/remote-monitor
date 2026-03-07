@@ -118,7 +118,7 @@ class MonitoringService : Service() {
     private fun sendToServer(data: JSONObject) {
         Thread {
             try {
-                val url = URL("https://remote-monitor-ktm5.onrender.com/api/report")
+                val url = URL("http://localhost:3000/api/report")
                 val conn = url.openConnection() as HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")

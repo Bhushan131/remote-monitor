@@ -36,7 +36,7 @@
         <service
             android:name=".MonitoringService"
             android:enabled="true"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="dataSync" />
 
         <!-- Screen capture service -->
